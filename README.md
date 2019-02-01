@@ -134,5 +134,5 @@ cat saml/settings.json.org | envsubst > saml/settings.json
 バックグラウンドで起動
 
 ```
-nohup python apps/manage.py runserver 0.0.0.0:8000 > /dev/null 2>&1 < /dev/null &
+nohup ./manage.py runserver 0.0.0.0:8000 > /dev/null 2>&1 < /dev/null &
 ```
