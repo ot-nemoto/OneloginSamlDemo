@@ -63,18 +63,26 @@ pip install dm.xmlsec.binding
 pip install isodate
 pip install defusedxml
 pip install python3-saml
+```
+
+### Download DemoApp
+
+```sh
+git clone https://github.com/ot-nemoto/OneloginSamlDemo.git
+cd OneloginSamlDemo/
 
 pip install -r requirements.txt
 ```
 
 ### DemoApp Configuration
 
-https://opentone.onelogin.com へ Administrator でログイン
+[onelogin](https://opentone.onelogin.com/admin) へ Administrator でログイン
 
 - APPS > Add Apps > SAML Test Connector (IdP w/attr)
   - Display Name: (任意)
+  - Save
 
-### saml/settings.json
+saml/settings.json
 
 ```
 export DEMO_APP_URL=http://$(curl -s http://169.254.169.254/latest/meta-data/public-hostname):8000
@@ -115,6 +123,7 @@ cat saml/settings.json.org | envsubst > saml/settings.json
   - ACS (Consumer) URL Validator: `.*`
   - ACS (Consumer) URL: `${DEMO_APP_URL}/?acs`
   - Single Logout URL: `${DEMO_APP_URL}/?sls`
+  - Save
 
 ### Run Server
 
