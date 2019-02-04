@@ -136,3 +136,158 @@ cat saml/settings.json.org | envsubst > saml/settings.json
 ```
 nohup ./manage.py runserver 0.0.0.0:8000 > /dev/null 2>&1 < /dev/null &
 ```
+
+# Login by SAML
+
+### クライアントIDとクライアントシークレットの生成
+
+https://developers.onelogin.com/api-docs/1/getting-started/working-with-api-credentials
+
+[onelogin](https://opentone.onelogin.com/admin) へ Administrator でログイン
+
+- DEVELOPERS > API Credentials > NEW CREDENTIAL
+  - Name: (任意)
+  - Credentials Scope: Manage All
+  - Save
+
+- `Client ID` および `Client Secret` が振られるので、環境変数に設定
+
+```sh
+CLIENT_ID=<Client ID>
+CLIENT_SECRET=<Client Secret>
+```
+
+### アクセストークンの取得
+
+https://developers.onelogin.com/api-docs/1/oauth20-tokens/generate-tokens
+
+```sh
+curl -s 'https://api.us.onelogin.com/auth/oauth2/token' \
+  -X POST \
+  -H "Authorization: client_id:${CLIENT_ID}, client_secret:${CLIENT_SECRET}" \
+  -H "Content-Type: application/json" \
+  -d '{ "grant_type":"client_credentials" }' | jq
+```
+
+Access Tokenのみ抽出
+
+```sh
+ACCESS_TOKEN=$(curl -s 'https://api.us.onelogin.com/auth/oauth2/token' \
+  -X POST \
+  -H "Authorization: client_id:${CLIENT_ID}, client_secret:${CLIENT_SECRET}" \
+  -H "Content-Type: application/json" \
+  -d '{ "grant_type":"client_credentials" }' | jq -r '.data[].access_token')
+echo ${ACCESS_TOKEN}
+  #
+```
+
+### セッショントークンの取得
+
+https://developers.onelogin.com/api-docs/1/login-page/create-session-login-token
+
+- `Login User or Email`: Onelogin User
+- `Password`: Onelogin User Passeord
+- `Onlogin SubDomain`: https://**\<SubDomain>**.onelogin.com/portal/
+
+```sh
+LOGIN_USER=<Login User or Email>
+LOGIN_PASSWORD=<Password>
+LOGIN_SUBDOMAIN=<Onlogin SubDomain>
+
+curl -s 'https://api.us.onelogin.com/api/1/login/auth' \
+  -X POST \
+  -H "Authorization: bearer: ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{ \"username_or_email\":\"${LOGIN_USER}\", \"password\":\"${LOGIN_PASSWORD}\", \"subdomain\":\"${LOGIN_SUBDOMAIN}\" }" | jq
+```
+
+Session Tokenのみ抽出
+
+```sh
+export SESSION_TOKEN=$(curl -s 'https://api.us.onelogin.com/api/1/login/auth' \
+  -X POST \
+  -H "Authorization: bearer: ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{ \"username_or_email\":\"${LOGIN_USER}\", \"password\":\"${LOGIN_PASSWORD}\", \"subdomain\":\"${LOGIN_SUBDOMAIN}\" }" | jq -r '.data[].session_token')
+echo ${SESSION_TOKEN}
+  #
+```
+
+### ブラウザ経由でOnloginのポータルを表示
+
+https://developers.onelogin.com/api-docs/1/login-page/create-session-via-token
+
+```sh
+cat << 'EOT' | envsubst > onelogin-demo.html
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <p>Auth API Test</p>
+        <form action=
+         "https://opentone.onelogin.com/session_via_api_token" method="POST">
+            <input type="hidden" name="session_token" value="${SESSION_TOKEN}">
+            <input type="submit" placeholder="GO">
+            <input id="auth_token" type="hidden">
+        </form>
+    </body>
+</html>
+EOT
+```
+
+- Open `onelogin-demo.html` via browser
+
+### ブラウザ経由でデモアプリのログイン後の画面を表示
+
+https://developers.onelogin.com/api-docs/1/saml-assertions/generate-saml-assertion
+
+- `App ID`:
+  - [onelogin](https://opentone.onelogin.com/admin) へ Administrator でログイン
+  - APP > Company Apps > \<App>
+  - https://\<SubDomain>.onelogin.com/apps/**\<App ID>**/edit
+
+```sh
+APP_ID=<App ID>
+
+curl -s "https://api.us.onelogin.com/api/1/saml_assertion" \
+  -X POST \
+  -H "Authorization: bearer: ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{ \"username_or_email\":\"${LOGIN_USER}\", \"password\":\"${LOGIN_PASSWORD}\", \"app_id\":\"${APP_ID}\", \"subdomain\":\"${LOGIN_SUBDOMAIN}\" }" | jq
+```
+
+SAML Responseのみ抽出
+
+```sh
+export SAML_RESPONSE=$(curl -s "https://api.us.onelogin.com/api/1/saml_assertion" \
+  -X POST \
+  -H "Authorization: bearer: ${ACCESS_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "{ \"username_or_email\":\"${LOGIN_USER}\", \"password\":\"${LOGIN_PASSWORD}\", \"app_id\":\"${APP_ID}\", \"subdomain\":\"${LOGIN_SUBDOMAIN}\" }" | jq -r '.data')
+echo ${SAML_RESPONSE}
+  #
+```
+
+```sh
+cat << 'EOT' | envsubst > onelogin-demo.html
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <p>Auth API Test</p>
+        <form action="${DEMO_APP_URL}?acs" method="POST">
+            <input type="hidden" name="RelayState" value="${APP_URL}">
+            <input type="hidden" name="SAMLResponse" value="${SAML_RESPONSE}">
+            <input type="submit" placeholder="GO">
+            <input id="auth_token" type="hidden">
+        </form>
+    </body>
+</html>
+EOT
+```
+
+- Open `onelogin-demo.html` via browser
