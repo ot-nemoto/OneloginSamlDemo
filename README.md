@@ -76,7 +76,7 @@ pip install -r requirements.txt
 
 ### DemoApp Configuration
 
-[onelogin](https://opentone.onelogin.com/admin) へ Administrator でログイン
+onelogin へ Administrator でログイン
 
 - APPS > Add Apps > SAML Test Connector (IdP w/attr)
   - Display Name: (任意)
@@ -143,7 +143,7 @@ nohup ./manage.py runserver 0.0.0.0:8000 > /dev/null 2>&1 < /dev/null &
 
 https://developers.onelogin.com/api-docs/1/getting-started/working-with-api-credentials
 
-[onelogin](https://opentone.onelogin.com/admin) へ Administrator でログイン
+onelogin へ Administrator でログイン
 
 - DEVELOPERS > API Credentials > NEW CREDENTIAL
   - Name: (任意)
@@ -227,7 +227,7 @@ cat << 'EOT' | envsubst > onelogin-demo.html
     <body>
         <p>Auth API Test</p>
         <form action=
-         "https://opentone.onelogin.com/session_via_api_token" method="POST">
+         "https://${LOGIN_SUBDOMAIN}.onelogin.com/session_via_api_token" method="POST">
             <input type="hidden" name="session_token" value="${SESSION_TOKEN}">
             <input type="submit" placeholder="GO">
             <input id="auth_token" type="hidden">
@@ -244,7 +244,7 @@ EOT
 https://developers.onelogin.com/api-docs/1/saml-assertions/generate-saml-assertion
 
 - `App ID`:
-  - [onelogin](https://opentone.onelogin.com/admin) へ Administrator でログイン
+  - onelogin へ Administrator でログイン
   - APP > Company Apps > \<App>
   - https://\<SubDomain>.onelogin.com/apps/**\<App ID>**/edit
 
